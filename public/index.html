@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ollama Chat</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/forms"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet" />
+  </head>
+  <body class="bg-black text-white font-sans h-screen flex flex-col md:flex-row overflow-hidden">
+    <!-- Mobile Menu -->
+    <div class="md:hidden bg-black p-4 border-b border-white">
+      <select class="w-full bg-gray-900 text-white p-2 rounded-lg">
+        <option>+ New Chat</option>
+        <option>Last Conversation</option>
+        <option>Resume Help</option>
+      </select>
+      <input type="text" placeholder="Search conversations..." class="w-full mt-2 p-2 bg-gray-800 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white transition-all" />
+    </div>
+
+    <!-- Sidebar (Desktop) -->
+    <aside class="hidden md:flex w-full md:w-64 bg-gray-900 p-4 flex-col gap-4 border-b md:border-b-0 md:border-r border-white">
+      <div class="flex items-center gap-2">
+        <img src="https://cdn-icons-png.flaticon.com/512/4712/4712027.png" alt="Logo" class="w-8 h-8" />
+        <h1 class="text-xl font-bold text-white">OllamaChat</h1>
+      </div>
+      <button class="bg-white text-black py-2 px-4 rounded-xl hover:bg-gray-300 transition-all">
+        + New Chat
+      </button>
+      <div class="flex-1 overflow-y-auto">
+        <h2 class="text-sm text-gray-400 uppercase mb-2">History</h2>
+        <ul class="space-y-2 text-sm">
+          <li class="bg-gray-800 p-2 rounded-lg hover:bg-gray-700 cursor-pointer transition-all">
+            Last Conversation
+          </li>
+          <li class="bg-gray-800 p-2 rounded-lg hover:bg-gray-700 cursor-pointer transition-all">
+            Resume Help
+          </li>
+        </ul>
+      </div>
+      <div class="mt-auto text-xs text-gray-400">Model: llama3-7b</div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="flex-1 flex flex-col">
+      <!-- Top Bar -->
+      <header class="bg-gray-900 border-b border-white px-4 py-2 hidden md:flex items-center justify-between">
+        <input
+          type="text"
+          placeholder="Search messages..."
+          class="w-full max-w-md p-2 bg-gray-800 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring focus:ring-white transition-all"
+        />
+      </header>
+
+      <!-- Messages Area -->
+      <section id="chat-window" class="flex-1 overflow-y-auto p-6 space-y-6"></section>
+
+      <!-- Typing Indicator -->
+      <div id="typing-indicator" class="px-6 py-2 hidden text-sm text-gray-400 animate-pulse">Assistant is typing...</div>
+
+      <!-- Footer Input -->
+      <footer class="p-4 border-t border-white bg-gray-900">
+        <form id="chat-form" class="flex items-center gap-2">
+          <input
+            id="chat-input"
+            type="text"
+            placeholder="Type your message..."
+            class="flex-1 p-3 rounded-2xl bg-gray-800 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white transition-all"
+          />
+          <button
+            type="submit"
+            class="bg-white hover:bg-gray-300 transition-all text-black px-4 py-2 rounded-xl flex items-center justify-center"
+          >
+            <i class="bi bi-stars text-xl"></i>
+          </button>
+        </form>
+      </footer>
+    </main>
+
+    <script>
+      const form = document.getElementById("chat-form");
+      const input = document.getElementById("chat-input");
+      const chatWindow = document.getElementById("chat-window");
+      const typingIndicator = document.getElementById("typing-indicator");
+
+      function createMessageElement(role, content) {
+        const wrapper = document.createElement("div");
+        wrapper.className = `flex items-start gap-4 ${role === 'user' ? 'justify-end' : ''} animate-fade-in`;
+
+        const bubble = document.createElement("div");
+        bubble.className = `${role === 'user' ? 'bg-white text-black' : 'bg-gray-800'} rounded-2xl p-4 max-w-2xl`;
+        bubble.textContent = content;
+
+        const avatar = document.createElement("div");
+        avatar.className = `w-10 h-10 rounded-full ${role === 'user' ? 'bg-white text-gray-800' : 'bg-white text-black'} flex items-center justify-center font-bold`;
+        avatar.textContent = role === 'user' ? 'U' : 'B';
+
+        if (role === 'user') {
+          wrapper.appendChild(bubble);
+          wrapper.appendChild(avatar);
+        } else {
+          wrapper.appendChild(avatar);
+          wrapper.appendChild(bubble);
+        }
+
+        return wrapper;
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const message = input.value.trim();
+        if (!message) return;
+
+        chatWindow.appendChild(createMessageElement("user", message));
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+
+        input.value = "";
+        typingIndicator.classList.remove("hidden");
+
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: [{ role: "user", content: message }] })
+        });
+
+        const data = await res.json();
+        typingIndicator.classList.add("hidden");
+
+        chatWindow.appendChild(createMessageElement("assistant", data.content));
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+      });
+    </script>
+
+    <style>
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in {
+        animation: fade-in 0.3s ease-in-out;
+      }
+    </style>
+  </body>
+</html>
