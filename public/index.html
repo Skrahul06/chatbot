@@ -1,151 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ollama Chat</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/forms"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet" />
-  </head>
-  <body class="bg-black text-white font-sans h-screen flex flex-col md:flex-row overflow-hidden">
-    <!-- Mobile Menu -->
-    <div class="md:hidden bg-black p-4 border-b border-white">
-      <select class="w-full bg-gray-900 text-white p-2 rounded-lg">
-        <option>+ New Chat</option>
-        <option>Last Conversation</option>
-        <option>Resume Help</option>
-      </select>
-      <input type="text" placeholder="Search conversations..." class="w-full mt-2 p-2 bg-gray-800 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white transition-all" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ollama Bot</title>
+  <style>
+    :root {
+      --bg-color: #f4f4f4;
+      --header-bg: #ffffff;
+      --chat-bg: #ffffff;
+      --user-msg: #d3eaff;
+      --bot-msg: #e9e9e9;
+      --border: #ccc;
+      --accent: #007bff;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: #111;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      background-color: var(--header-bg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+
+    .logo img {
+      height: 28px;
+      margin-right: 10px;
+    }
+
+    .menu {
+      position: relative;
+    }
+
+    .menu-btn {
+      font-size: 1.5rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    .dropdown {
+      position: absolute;
+      right: 0;
+      background: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      border-radius: 6px;
+      display: none;
+      flex-direction: column;
+      padding: 0.5rem;
+      z-index: 10;
+    }
+
+    .dropdown.show {
+      display: flex;
+    }
+
+    .dropdown button {
+      background: none;
+      border: none;
+      padding: 0.5rem 1rem;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .chat-container {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+      background-color: var(--chat-bg);
+    }
+
+    .message {
+      max-width: 80%;
+      margin: 0.5rem 0;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      line-height: 1.5;
+      word-wrap: break-word;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .user { align-self: flex-end; background-color: var(--user-msg); }
+    .bot { align-self: flex-start; background-color: var(--bot-msg); }
+
+    form {
+      display: flex;
+      padding: 1rem;
+      border-top: 1px solid var(--border);
+      background-color: white;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    button[type="submit"] {
+      margin-left: 0.5rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    .send-icon {
+      width: 24px;
+      height: 24px;
+      fill: var(--accent);
+    }
+
+    .typing {
+      font-style: italic;
+      display: flex;
+      align-items: center;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      background: #888;
+      border-radius: 50%;
+      margin: 0 2px;
+      animation: blink 1.4s infinite;
+    }
+
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0.2; }
+      40% { opacity: 1; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 768px) {
+      .dropdown { left: auto; right: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="https://avatars.githubusercontent.com/u/141019167" alt="Ollama Logo" /> Ollama Bot
     </div>
-
-    <!-- Sidebar (Desktop) -->
-    <aside class="hidden md:flex w-full md:w-64 bg-gray-900 p-4 flex-col gap-4 border-b md:border-b-0 md:border-r border-white">
-      <div class="flex items-center gap-2">
-        <img src="https://cdn-icons-png.flaticon.com/512/4712/4712027.png" alt="Logo" class="w-8 h-8" />
-        <h1 class="text-xl font-bold text-white">OllamaChat</h1>
+    <div class="menu">
+      <button class="menu-btn" onclick="toggleMenu()">&#9776;</button>
+      <div class="dropdown" id="dropdown-menu">
+        <button onclick="startNewChat()">➕ New Chat</button>
+        <button onclick="alert('Load previous chat (feature pending)')">📁 Load Chat</button>
       </div>
-      <button class="bg-white text-black py-2 px-4 rounded-xl hover:bg-gray-300 transition-all">
-        + New Chat
-      </button>
-      <div class="flex-1 overflow-y-auto">
-        <h2 class="text-sm text-gray-400 uppercase mb-2">History</h2>
-        <ul class="space-y-2 text-sm">
-          <li class="bg-gray-800 p-2 rounded-lg hover:bg-gray-700 cursor-pointer transition-all">
-            Last Conversation
-          </li>
-          <li class="bg-gray-800 p-2 rounded-lg hover:bg-gray-700 cursor-pointer transition-all">
-            Resume Help
-          </li>
-        </ul>
-      </div>
-      <div class="mt-auto text-xs text-gray-400">Model: llama3-7b</div>
-    </aside>
+    </div>
+  </header>
 
-    <!-- Main Chat Area -->
-    <main class="flex-1 flex flex-col">
-      <!-- Top Bar -->
-      <header class="bg-gray-900 border-b border-white px-4 py-2 hidden md:flex items-center justify-between">
-        <input
-          type="text"
-          placeholder="Search messages..."
-          class="w-full max-w-md p-2 bg-gray-800 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring focus:ring-white transition-all"
-        />
-      </header>
+  <div class="chat-container" id="chat"></div>
 
-      <!-- Messages Area -->
-      <section id="chat-window" class="flex-1 overflow-y-auto p-6 space-y-6"></section>
+  <form id="chat-form">
+    <input type="text" id="user-input" placeholder="Type something..." required />
+    <button type="submit">
+      <svg class="send-icon" viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+    </button>
+  </form>
 
-      <!-- Typing Indicator -->
-      <div id="typing-indicator" class="px-6 py-2 hidden text-sm text-gray-400 animate-pulse">Assistant is typing...</div>
+  <script>
+    const chat = document.getElementById('chat');
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('user-input');
+    const dropdown = document.getElementById('dropdown-menu');
 
-      <!-- Footer Input -->
-      <footer class="p-4 border-t border-white bg-gray-900">
-        <form id="chat-form" class="flex items-center gap-2">
-          <input
-            id="chat-input"
-            type="text"
-            placeholder="Type your message..."
-            class="flex-1 p-3 rounded-2xl bg-gray-800 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white transition-all"
-          />
-          <button
-            type="submit"
-            class="bg-white hover:bg-gray-300 transition-all text-black px-4 py-2 rounded-xl flex items-center justify-center"
-          >
-            <i class="bi bi-stars text-xl"></i>
-          </button>
-        </form>
-      </footer>
-    </main>
+    function toggleMenu() {
+      dropdown.classList.toggle('show');
+    }
 
-    <script>
-      const form = document.getElementById("chat-form");
-      const input = document.getElementById("chat-input");
-      const chatWindow = document.getElementById("chat-window");
-      const typingIndicator = document.getElementById("typing-indicator");
+    function startNewChat() {
+      chat.innerHTML = '';
+      dropdown.classList.remove('show');
+    }
 
-      function createMessageElement(role, content) {
-        const wrapper = document.createElement("div");
-        wrapper.className = `flex items-start gap-4 ${role === 'user' ? 'justify-end' : ''} animate-fade-in`;
+    function addMessage(msg, role) {
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+      div.textContent = msg;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
 
-        const bubble = document.createElement("div");
-        bubble.className = `${role === 'user' ? 'bg-white text-black' : 'bg-gray-800'} rounded-2xl p-4 max-w-2xl`;
-        bubble.textContent = content;
+    function showTyping() {
+      const typing = document.createElement('div');
+      typing.id = 'typing';
+      typing.className = 'message bot typing';
+      typing.innerHTML = 'Thinking <span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+      chat.appendChild(typing);
+      chat.scrollTop = chat.scrollHeight;
+    }
 
-        const avatar = document.createElement("div");
-        avatar.className = `w-10 h-10 rounded-full ${role === 'user' ? 'bg-white text-gray-800' : 'bg-white text-black'} flex items-center justify-center font-bold`;
-        avatar.textContent = role === 'user' ? 'U' : 'B';
+    function removeTyping() {
+      const t = document.getElementById('typing');
+      if (t) t.remove();
+    }
 
-        if (role === 'user') {
-          wrapper.appendChild(bubble);
-          wrapper.appendChild(avatar);
-        } else {
-          wrapper.appendChild(avatar);
-          wrapper.appendChild(bubble);
-        }
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userText = input.value.trim();
+      if (!userText) return;
 
-        return wrapper;
-      }
+      addMessage(userText, 'user');
+      input.value = '';
+      showTyping();
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const message = input.value.trim();
-        if (!message) return;
-
-        chatWindow.appendChild(createMessageElement("user", message));
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-
-        input.value = "";
-        typingIndicator.classList.remove("hidden");
-
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: [{ role: "user", content: message }] })
-        });
-
-        const data = await res.json();
-        typingIndicator.classList.add("hidden");
-
-        chatWindow.appendChild(createMessageElement("assistant", data.content));
-        chatWindow.scrollTop = chatWindow.scrollHeight;
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [{ role: 'user', content: userText }] })
       });
-    </script>
 
-    <style>
-      @keyframes fade-in {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-      .animate-fade-in {
-        animation: fade-in 0.3s ease-in-out;
-      }
-    </style>
-  </body>
+      const data = await res.json();
+      removeTyping();
+      addMessage(data.content, 'bot');
+    });
+  </script>
+</body>
 </html>
